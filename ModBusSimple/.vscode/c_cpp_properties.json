@@ -1,0 +1,30 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "c:\\avr8_gnu_toolchain\\avr\\include",
+                "c:\\avr8_gnu_toolchain\\lib\\gcc\\avr\\4.8.1\\include"
+            ],
+            "defines": [
+                "__AVR_ATmega2560__",
+                "F_CPU=16000000UL"
+            ],
+            "compilerPath": "\"c:\\avr8_gnu_toolchain\\avr\\bin\\gcc.exe\"",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x86"
+        },
+        {
+            "name": "AVR",
+            "intelliSenseMode": "${default}",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "compilerPath": "",
+            "includePath": [],
+            "compilerArgs": []
+        }
+    ],
+    "version": 4
+}

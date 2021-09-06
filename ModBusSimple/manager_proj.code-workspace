@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"modbusslave.h": "c",
+			"io.h": "c",
+			"interrupt.h": "c",
+			"macros.h": "c",
+			"uart.h": "c"
+		}
+	}
+}

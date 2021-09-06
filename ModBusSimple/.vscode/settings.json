@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "uart.h": "c",
+        "modbusslave.h": "c",
+        "io.h": "c",
+        "macros.h": "c"
+    }
+}
