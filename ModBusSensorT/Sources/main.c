@@ -22,6 +22,7 @@ int main(void)
     sei();
     
     sSlave *slave = ModbusSlaveInit(0x01, 3);
+    AddInfo(slave, "Modbus ver 1.0.0.0");
     AddUInt16ToRegs(slave, &freeRam);
     AddUInt16ToRegs(slave, &sensor_t_value);
     AddUInt8ToRegs(slave, &sensor_t_err);

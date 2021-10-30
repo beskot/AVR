@@ -8,6 +8,7 @@
 // Команды
 #define ReadHoldingRegisters 0x03
 #define PresetMultipleRegisters 0x10
+#define DeviceID 0x11
 
 // Ошибки
 /*
@@ -42,6 +43,7 @@ typedef struct
 	uint8_t id;
 	sRegs16 *regs;
 	uint8_t counter;
+	char* info;
 } sSlave;
 
 sSlave *ModbusSlaveInit(uint8_t id, uint16_t bufSize);
@@ -52,5 +54,6 @@ void AddUInt32ToRegs(sSlave *slave, uint32_t *val);
 void AddInt32ToRegs(sSlave *slave, int32_t *val);
 void AddFloatToRegs(sSlave *slave, float *val);
 uint16_t GetCRC16(uint8_t *, uint8_t, uint32_t);
+void AddInfo(sSlave *slave, char* devInfo);
 
 #endif

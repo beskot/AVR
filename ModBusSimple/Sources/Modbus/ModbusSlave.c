@@ -1,4 +1,5 @@
 #include "ModbusSlave.h"
+#include <string.h>
 
 // Сформировать ответ с ошибкой.
 uint8_t* _errorMessage(uint8_t slave_id, uint8_t func, uint8_t err, uint32_t *tx_len);
@@ -6,6 +7,8 @@ uint8_t* _errorMessage(uint8_t slave_id, uint8_t func, uint8_t err, uint32_t *tx
 uint8_t* _func3(sSlave *slave, uint8_t *rx,  uint32_t *tx_len);
 // Сформировать ответ на запрос с функцией 0x10.
 uint8_t* _func10(sSlave *slave, uint8_t *rx,  uint32_t *tx_len);
+// Чтение ID (серийного номера)
+uint8_t* _func11(sSlave *slave, uint8_t *rx,  uint32_t *tx_len);
 
 //Создать клента
 sSlave *ModbusSlaveInit(uint8_t id, uint16_t regCount)
@@ -57,6 +60,12 @@ void AddFloatToRegs(sSlave *slave, float *val)
 	AddUInt16ToRegs(slave, (uint16_t *)val);
 }
 
+// Добавить дополнительную информацию устройства (для ф-ции 0x11)
+void AddInfo(sSlave *slave, char* devInfo)
+{
+	slave->info = devInfo;
+}
+
 // Получение и обработка сообщения.
 //client - контекст данных
 //tx - буфер приемник
@@ -87,6 +96,10 @@ uint8_t* Transaction(void *client, uint8_t *rx, uint32_t rx_len, uint32_t* tx_le
 
 			case PresetMultipleRegisters:
 				tx = _func10(slave, rx, tx_len);
+				break;
+
+			case DeviceID:
+				tx = _func11(slave, rx, tx_len);
 				break;
 
 			default:
@@ -252,6 +265,47 @@ uint8_t* _func10(sSlave *slave, uint8_t *rx,  uint32_t *tx_len)
 		tx[3] = BM_ByteLow(offset);
 		tx[4] = BM_ByteHi(count);
 		tx[5] = BM_ByteLow(count);
+	}
+
+	return tx;
+}
+
+uint8_t* _func11(sSlave *slave, uint8_t *rx,  uint32_t *tx_len)
+{
+	/*
+	Формат запроса: <--
+	|адрес устройства|
+	| |код команды|
+	| | |Контрольна сумма Low|
+	| | | |Контрольна сумма Hi|
+	|0|1|2|3
+
+	Формат ответа: -->
+	|адрес устройства
+	| |код команды
+	| | |число байт
+	| | | |id
+	| | | | |индикатор состояния 0x00 - off 0xff - on
+	| | | | | |дополнительные данные
+	| | | | | |   |контрольна сумма Low|
+	| | | | | |   |   |контрольна сумма Hi|
+	|0|1|2|3|4|5..|n-2|n-1
+	*/
+
+	uint8_t bcount = 2 + strlen(slave->info);
+	*tx_len = 5 + bcount;
+	uint8_t* tx = (uint8_t *)malloc(*tx_len * sizeof(uint8_t));
+
+	tx[0] = slave->id;
+	tx[1] = rx[1];
+	tx[2] = bcount;
+	tx[3] = slave->id;
+	tx[4] = 0xFF;
+
+	uint16_t i = 5;
+	while(*slave->info != '\0')
+	{
+		tx[i++] = *(slave->info++);
 	}
 
 	return tx;
