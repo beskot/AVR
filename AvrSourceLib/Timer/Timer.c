@@ -76,6 +76,6 @@ ISR(TIMER2_OVF_vect)
 {
 	if (InterruptOverflowHandler)
 	{
-		InterruptOverflowHandler();
+		InterruptOverflowHandler(timer2.paramOverFlowInterrupt);
 	}
 }

@@ -2,82 +2,67 @@
 #include "Uart.h"
 #include "../Timer/Timer.h"
 
-sSerialPort serial;
+static sSerialPort* serials[4];
 static uint8_t buffer[BUFSIZE];
-static uint32_t size = 0;
+static uint32_t rx_size = 0;
+static uint32_t tx_size = 0;
 
 static Transact Transaction;
-
-static void _uartBegin(SERIALPORT_BR, SERIALPORT_DB, SERIALPORT_PRT, SERIALPORT_SB);
-static void _uartWriteByte(uint8_t);
-static uint8_t _uartReadByte();
-static void _uartWrite(uint8_t *, uint32_t);
-static uint32_t _uartRead(uint8_t *);
-
-static void _receiveCompleteHandler(Transact func);
 static void _uartReadComplete();
+static void _usart_rx_vect(sSerialPort* serial);
 
-void Uart0Init()
+sSerialPort* UartInit(SERIALPORT_NUM number, uint8_t* UBRR_H, uint8_t* UBRR_L, uint8_t* UCSR_A, uint8_t* UCSR_B, uint8_t* UCSR_C, uint8_t* UDR)
 {
-	serial.UBRR_H = &UBRR0H;
-	serial.UBRR_L = &UBRR0L;
-	serial.UCSR_A = &UCSR0A;
-	serial.UCSR_B = &UCSR0B;
-	serial.UCSR_C = &UCSR0C;
-	serial.UDR_ = &UDR0;
-
-	serial.Begin = &_uartBegin;
-	serial.SendBytes = &_uartWrite;
-	serial.ReceiveBytes = &_uartRead;
-	serial.SetTransaction = &_receiveCompleteHandler;
+	sSerialPort * serial = (sSerialPort *)malloc(sizeof(sSerialPort));
+	serial->UBRR_H = UBRR_H;
+	serial->UBRR_L = UBRR_L;
+	serial->UCSR_A = UCSR_A;
+	serial->UCSR_B = UCSR_B;
+	serial->UCSR_C = UCSR_C;
+	serial->UDR_ = UDR;
 
 	Timer2Init();
 	timer2.Config(T8_MODE_NORM);
 	timer2.InterruptOverFlowAttach(&_uartReadComplete);
+
+	serials[number] = serial;
+	return serial;
 }
 
-static void _uartBegin(SERIALPORT_BR br, SERIALPORT_DB b, SERIALPORT_PRT p, SERIALPORT_SB sb)
+void UartBegin(sSerialPort* serial, SERIALPORT_BR br, SERIALPORT_DB b, SERIALPORT_PRT p, SERIALPORT_SB sb)
 {
 	uint16_t baundrate = ((F_CPU / br) / 16UL) - 1;
-	*serial.UBRR_H = (uint8_t)(baundrate >> 8);
-	*serial.UBRR_L = (uint8_t)(baundrate & 0x00ff);
+	*serial->UBRR_H = (uint8_t)(baundrate >> 8);
+	*serial->UBRR_L = (uint8_t)(baundrate & 0x00ff);
 
-	*serial.UCSR_B = BM_ByteHi(b);
-	*serial.UCSR_C |= BM_ByteLow(b);
+	*serial->UCSR_B = BM_ByteHi(b);
+	*serial->UCSR_C |= BM_ByteLow(b);
 
-	*serial.UCSR_C |= p;
-	*serial.UCSR_C |= sb;
-
-	//*serial.UCSR_B |= SERIALPORT_CTRL_EN_INT_RX;
-	//*serial.UCSR_B &= ~SERIALPORT_CTRL_EN_INT_RX;
-	//*serial->UCSR_B |= SERIALPORT_CTRL_EN_TX;
+	*serial->UCSR_C |= p;
+	*serial->UCSR_C |= sb;
 }
 
-static void _uartWriteByte(uint8_t data)
+void UartWriteByte(sSerialPort* serial, uint8_t data)
 {
-	//Ожидать пока приемник не будет готов
-	while (!(*serial.UCSR_A & (1 << UDRE0))) { }
-	//Записать данные в буфер
-	*serial.UDR_ = data;
+	while (!(*serial->UCSR_A & (1 << 5))) { }
+	*serial->UDR_ = data;
 }
 
-static uint8_t _uartReadByte()
+uint8_t UartReadByte(sSerialPort* serial)
 {
-	//Ожидать пока данные не будут получены
-	while (!(*serial.UCSR_A & (1 << RXC0))) { }
-	//Получить данные из буфера приемника
-	return *serial.UDR_;
+	while (!(*serial->UCSR_A & (1 << 7))) { }
+	return *serial->UDR_;
 }
 
-static void _uartWrite(uint8_t *buf, uint32_t len)
+void UartWrite(sSerialPort* serial, uint8_t *buf, uint32_t len)
 {
 	while (len--)
 	{
-		_uartWriteByte(*buf++);
+		UartWriteByte(serial, *buf++);
 	}
 }
 
-static uint32_t _uartRead(uint8_t *buf)
+uint32_t UartRead(sSerialPort* serial, uint8_t *buf)
 {
 	if (timer2.IsStart())
 	{
@@ -86,49 +71,75 @@ static uint32_t _uartRead(uint8_t *buf)
 	else
 	{
 		timer2.Start(T8_CLK_1024, 0);
-		size = 0;
+		rx_size = 0;
 	}
-	*(buf++) = _uartReadByte(serial);
-	size++;
+	*(buf++) = UartReadByte(serial);
+	rx_size++;
 
-	return size;
+	return rx_size;
 }
 
-static void _uartReadComplete()
+static void _uartReadComplete(void* object)
 {
+	sSerialPort* ser = (sSerialPort*) object;
 	timer2.Stop();
 
-	*serial.UCSR_B &= ~(SERIALPORT_CTRL_EN_RX | SERIALPORT_CTRL_EN_INT_RX);
-	*serial.UCSR_B |= SERIALPORT_CTRL_EN_TX;
+	*ser->UCSR_B &= ~(SERIALPORT_CTRL_EN_RX | SERIALPORT_CTRL_EN_INT_RX);
+	*ser->UCSR_B |= SERIALPORT_CTRL_EN_TX;
 
 	if (Transaction)
 	{
-		Transaction(serial.client, buffer, size, &_uartWrite);
+		uint8_t* tx_buf = Transaction(ser->client, buffer, rx_size, &tx_size);
+		if (tx_buf != NULL && tx_size > 0)
+		{
+			UartWrite(ser, tx_buf, tx_size);
+			free(tx_buf);
+		}
 	}
 
-	*serial.UCSR_B &= ~SERIALPORT_CTRL_EN_TX;
-	*serial.UCSR_B |= SERIALPORT_CTRL_EN_RX | SERIALPORT_CTRL_EN_INT_RX;
+	*ser->UCSR_B &= ~SERIALPORT_CTRL_EN_TX;
+	*ser->UCSR_B |= SERIALPORT_CTRL_EN_RX | SERIALPORT_CTRL_EN_INT_RX;
 }
 
-static void _receiveCompleteHandler(Transact func)
+void SetTransmitter(sSerialPort* serial, Transact func)
 {
-	*serial.UCSR_B &= ~SERIALPORT_CTRL_EN_TX;
-	*serial.UCSR_B |= SERIALPORT_CTRL_EN_RX | SERIALPORT_CTRL_EN_INT_RX;
-	//*serial.UCSR_B |= SERIALPORT_CTRL_EN_TX;
+	*serial->UCSR_B &= ~SERIALPORT_CTRL_EN_TX;
+	*serial->UCSR_B |= SERIALPORT_CTRL_EN_RX | SERIALPORT_CTRL_EN_INT_RX;
 	Transaction = func;
+}
+
+static void _usart_rx_vect(sSerialPort* serial)
+{
+	if (timer2.IsStart())
+	{
+		*timer2.tcnt_ = 0;
+	}
+	else
+	{
+		timer2.paramOverFlowInterrupt = (void*)serial;
+		rx_size = 0;
+		timer2.Start(T8_CLK_1024, 0);		
+	}
+	buffer[rx_size++] = UartReadByte(serial);
 }
 
 // Прерывание по приему
 ISR(USART0_RX_vect)
 {
-	if (timer2.IsStart())
-	{
-		*timer2.tcnt_ = 0;
-	}
-	else
-	{
-		size = 0;
-		timer2.Start(T8_CLK_1024, 0);
-	}
-	buffer[size++] = _uartReadByte(serial);
+	_usart_rx_vect(serials[0]);
+}
+
+ISR(USART1_RX_vect)
+{
+	_usart_rx_vect(serials[1]);
+}
+
+ISR(USART2_RX_vect)
+{
+	_usart_rx_vect(serials[2]);
+}
+
+ISR(USART3_RX_vect)
+{
+	_usart_rx_vect(serials[3]);
 }

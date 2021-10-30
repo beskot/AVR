@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include "../Common/Macros.h"
 
-typedef void (*InterruptOverflow)();
+typedef void (*InterruptOverflow)(void* object);
 
 typedef uint8_t T8_t;
 #define T8_T0 0
@@ -42,7 +42,7 @@ typedef struct
 	volatile uint8_t *tifr_;
 	volatile uint8_t *tcnt_;
 	volatile uint8_t *ocr_a; //OCR2A
-
+	void* paramOverFlowInterrupt;
 	void (*Config)(T8_MODE);
 	void (*Start)(T8_CLK, uint8_t);
 	void (*Stop)();
