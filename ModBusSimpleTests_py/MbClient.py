@@ -63,6 +63,10 @@ class MbClient:
         self.__execute([self.__dev_addr, 0x10, start >> 8, start &
                         0x00FF, 0x00, 0x01, data >> 8, data & 0x00FF])
 
+    def get_dev_id(self) -> None:
+        '''Чтение дополнительной информации устройства'''
+        self.__execute([self.__dev_addr, 0x11])
+
     def __execute(self, buffer) -> None:
         '''Закрытый метод для записи\чтения данных в ведомое устройство
 

@@ -23,6 +23,7 @@ int main(void)
 
     sSlave *slave = ModbusSlaveInit(0x01, 1);
 
+    AddInfo(slave, "Modbus ver 1.0.0.0");
     AddUInt8ToRegs(slave, &OCR0A);  //0.5 reg / 1b
     AddUInt8ToRegs(slave, &val8);   //0.5 reg / 1b
 

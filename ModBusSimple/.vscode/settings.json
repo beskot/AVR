@@ -3,6 +3,7 @@
         "uart.h": "c",
         "modbusslave.h": "c",
         "io.h": "c",
-        "macros.h": "c"
+        "macros.h": "c",
+        "cstring": "c"
     }
 }

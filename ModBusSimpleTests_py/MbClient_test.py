@@ -13,6 +13,12 @@ class TestMbClient():
         print(f"Sensor temperature = {int.from_bytes(client.resp_bytes[5:7], 'big')}*C")
         print(f"Sensor flag error = {client.resp_bytes[7]}")
 
+        client.get_dev_id()
+        print(f"Device Info:")
+        print(f"ID: {client.resp_bytes[3]}")
+        print(f"Status: {client.resp_bytes[4]}")
+        print(f"Extra data: {''.join(chr(e) for e in client.resp_bytes[5:-2])}")
+
         client.close()
 
 
