@@ -27,10 +27,10 @@ int main(void)
     AddUInt8ToRegs(slave, &sensor_t_err);
     AddUInt8ToRegs(slave, &dummy);
     
-    Uart0Init();
-    serial.Begin(SERIALPORT_BR_19200, SERIALPORT_DB_8, SERIALPORT_PRT_NONE, SERIALPORT_SB_ONE);
-    serial.SetTransaction(Transaction);
-    serial.client = (void *)slave;
+    sSerialPort* uart0 = UartInit(SERIALPORT_NUM_0, &UBRR0H, &UBRR0L, &UCSR0A, &UCSR0B, &UCSR0C, &UDR0);
+    UartBegin(uart0, SERIALPORT_BR_19200, SERIALPORT_DB_8, SERIALPORT_PRT_NONE, SERIALPORT_SB_ONE);
+    SetTransmitter(uart0, Transaction);
+    uart0->client = (void *)slave;
 
     while (1)
     {

@@ -4,15 +4,14 @@
 #include "../ModBusSimple/Sources/Modbus/ModbusSlave.h"
 
 void ClientTransactionFloat(sSlave *slave, Transact);
-void ModbusClientFloat(uint8_t *, uint32_t);
 void reverse_array(uint8_t a[], int n);
 void PrintResponse(char* title, uint8_t *buf, int len);
 
 int main()
 {
-    int fval = -2; //-60274491;
-    sSlave *slave = ModbusSlaveInit(0x01, 2);
-    AddInt32ToRegs(slave, &fval);
+    uint16_t fval = 0x8990; //-60274491;
+    sSlave *slave = ModbusSlaveInit(0x01, 1);
+    AddUInt16ToRegs(slave, &fval);
     ClientTransactionFloat(slave, &Transaction);
 
     getchar();
@@ -29,18 +28,21 @@ void ClientTransactionFloat(sSlave *slave, Transact transact)
     buf[6] = BM_ByteLow(crc16);
     buf[7] = BM_ByteHi(crc16);
 
-    transact(slave, buf, 8, &ModbusClientFloat);
-}
+    uint32_t tx_len = 0;
+    uint8_t *tx_buf = transact(slave, buf, 8, &tx_len);
 
-void ModbusClientFloat(uint8_t *buf, uint32_t len)
-{
-    PrintResponse("Response(func 3)", buf, len);
+    if (tx_buf == NULL)
+    {
+        return;
+    }
+    
+    PrintResponse("Response(func 3)", tx_buf, tx_len);
     union
     {
         int val;
         uint8_t array[4];
     } u;
-    memcpy(u.array, buf + 3, 4);
+    memcpy(u.array, tx_buf + 3, 4);
     reverse_array(u.array, 4);
     printf("fval = %d", u.val);
 }

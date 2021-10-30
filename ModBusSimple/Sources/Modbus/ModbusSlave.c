@@ -1,11 +1,11 @@
 #include "ModbusSlave.h"
 
 // Сформировать ответ с ошибкой.
-uint8_t* _errorMessage(uint8_t slave_id, uint8_t func, uint8_t err, uint8_t *tx_len);
+uint8_t* _errorMessage(uint8_t slave_id, uint8_t func, uint8_t err, uint32_t *tx_len);
 // Сформировать ответ на запрос с функцией 0x03.
-uint8_t* _func3(sSlave *slave, uint8_t *rx,  uint8_t *tx_len);
+uint8_t* _func3(sSlave *slave, uint8_t *rx,  uint32_t *tx_len);
 // Сформировать ответ на запрос с функцией 0x10.
-uint8_t* _func10(sSlave *slave, uint8_t *rx,  uint8_t *tx_len);
+uint8_t* _func10(sSlave *slave, uint8_t *rx,  uint32_t *tx_len);
 
 //Создать клента
 sSlave *ModbusSlaveInit(uint8_t id, uint16_t regCount)
@@ -62,57 +62,53 @@ void AddFloatToRegs(sSlave *slave, float *val)
 //tx - буфер приемник
 //len - длина буфера приеника
 //resp - указатель на функцию передачи ответа
-void Transaction(void *client, uint8_t *rx, uint32_t len, pResp resp)
+uint8_t* Transaction(void *client, uint8_t *rx, uint32_t rx_len, uint32_t* tx_len)
 {
 	sSlave* slave = (sSlave*)client;
 
 	if (slave == NULL || slave->id != rx[0])
 	{
-		return;
+		return NULL;
 	}
 
 	uint8_t *tx = NULL;
-	uint8_t tx_len = 5;
+	*tx_len = 5;
 
-	uint16_t rx_crc16 = BM_WORD(rx[len - 1], rx[len - 2]);
-	uint16_t crc16 = GetCRC16(rx, 0, len - 2);
+	uint16_t rx_crc16 = BM_WORD(rx[rx_len - 1], rx[rx_len - 2]);
+	uint16_t crc16 = GetCRC16(rx, 0, rx_len - 2);
 
 	if (rx_crc16 == crc16)
 	{
 		switch (rx[1])
 		{		
 			case ReadHoldingRegisters:
-				tx = _func3(slave, rx, &tx_len);
+				tx = _func3(slave, rx, tx_len);
 				break;
 
 			case PresetMultipleRegisters:
-				tx = _func10(slave, rx, &tx_len);
+				tx = _func10(slave, rx, tx_len);
 				break;
 
 			default:
-				tx = _errorMessage(slave->id, rx[1], MB_ERR_NOTFUNC, &tx_len);
+				tx = _errorMessage(slave->id, rx[1], MB_ERR_NOTFUNC, tx_len);
 				break;
 		}
 	}
 	else
 	{
-		tx = _errorMessage(rx[0], rx[1], MB_ERR_DEFAULT, &tx_len);
+		tx = _errorMessage(rx[0], rx[1], MB_ERR_DEFAULT, tx_len);
 	}
 
-	crc16 = GetCRC16(tx, 0, tx_len - 2);
+	crc16 = GetCRC16(tx, 0, *tx_len - 2);
 
-	tx[tx_len - 2] = BM_ByteLow(crc16);
-	tx[tx_len - 1] = BM_ByteHi(crc16);
-
-	if (resp)
-	{
-		resp(tx, tx_len);
-	}
-	free(tx);
+	tx[*tx_len - 2] = BM_ByteLow(crc16);
+	tx[*tx_len - 1] = BM_ByteHi(crc16);
+	
+	return tx;
 }
 
 // Получить контрольную сумму переданных\полученных данных.
-uint16_t GetCRC16(uint8_t *buf, uint8_t seek, uint8_t bufsize)
+uint16_t GetCRC16(uint8_t *buf, uint8_t seek, uint32_t bufsize)
 {
 	uint16_t temp, flag;
 	unsigned char i, j;
@@ -133,7 +129,7 @@ uint16_t GetCRC16(uint8_t *buf, uint8_t seek, uint8_t bufsize)
 }
 
 // Сформировать ответ с ошибкой.
-uint8_t* _errorMessage(uint8_t slave_id, uint8_t func, uint8_t err, uint8_t *tx_len)
+uint8_t* _errorMessage(uint8_t slave_id, uint8_t func, uint8_t err, uint32_t *tx_len)
 {
 	/*
 	Формат: <--
@@ -155,7 +151,7 @@ uint8_t* _errorMessage(uint8_t slave_id, uint8_t func, uint8_t err, uint8_t *tx_
 }
 
 // Сформировать ответ на запрос с функцией 0x03.
-uint8_t* _func3(sSlave *slave, uint8_t *rx,  uint8_t *tx_len)
+uint8_t* _func3(sSlave *slave, uint8_t *rx,  uint32_t *tx_len)
 {
 	/*
 	Формат запроса: <--
@@ -186,13 +182,13 @@ uint8_t* _func3(sSlave *slave, uint8_t *rx,  uint8_t *tx_len)
 		*tx_len = 3 + count * 2 + 2;
 		tx = (uint8_t *)malloc(*tx_len * sizeof(uint8_t));
 
-		tx[0] = slave->id;
-		tx[1] = rx[1];
-		tx[2] = count * 2;
-
 		uint16_t i = 0;
 		uint16_t bcount = count * 2;
 		uint16_t boffset = offset * 2;
+
+		tx[0] = slave->id;
+		tx[1] = rx[1];
+		tx[2] = bcount;		
 
 		while (i < bcount)
 		{
@@ -205,7 +201,7 @@ uint8_t* _func3(sSlave *slave, uint8_t *rx,  uint8_t *tx_len)
 }
 
 // Сформировать ответ на запрос с функцией 0x10.
-uint8_t* _func10(sSlave *slave, uint8_t *rx,  uint8_t *tx_len)
+uint8_t* _func10(sSlave *slave, uint8_t *rx,  uint32_t *tx_len)
 {
 	/*
 	Формат запроса: <--

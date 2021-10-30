@@ -8,7 +8,7 @@
 
 typedef void (*pRecv)(uint8_t* buf, uint32_t len);
 typedef void (*pResp)(uint8_t *buf, uint32_t len);
-typedef void (*Transact)(void* client, uint8_t*, uint32_t, pResp resp);
+typedef uint8_t* (*Transact)(void* client, uint8_t* rx, uint32_t rxLen, uint32_t* txLen);
 
 #define BUFSIZE 256
 
@@ -63,15 +63,18 @@ typedef struct {
 	volatile uint8_t* UCSR_B;
 	volatile uint8_t* UCSR_C;
 	volatile uint8_t* UDR_;
-
-	void (*Begin)(SERIALPORT_BR, SERIALPORT_DB, SERIALPORT_PRT, SERIALPORT_SB);
-	void (*SendBytes)(uint8_t* buf, uint32_t count);
-	uint32_t (*ReceiveBytes)(uint8_t* buf);
-	void (*SetTransaction)(Transact);
 	void* client;
 }sSerialPort;
 
-void Uart0Init();
-extern sSerialPort serial;
+sSerialPort* UartInit(SERIALPORT_NUM number, uint8_t* UBRR_H, uint8_t* UBRR_L, uint8_t* UCSR_A, uint8_t* UCSR_B, uint8_t* UCSR_C, uint8_t* UDR);
+void UartBegin(sSerialPort* serial, SERIALPORT_BR br, SERIALPORT_DB b, SERIALPORT_PRT p, SERIALPORT_SB sb);
+
+void UartWriteByte(sSerialPort* serial, uint8_t data);
+uint8_t UartReadByte(sSerialPort* serial);
+
+void UartWrite(sSerialPort* serial, uint8_t *buf, uint32_t len);
+uint32_t UartRead(sSerialPort* serial, uint8_t *buf);
+
+void SetTransmitter(sSerialPort* serial, Transact func);
 
 #endif

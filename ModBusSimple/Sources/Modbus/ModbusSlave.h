@@ -28,8 +28,7 @@
 #define MB_ERR_DEFAULT 4
 
 //Интерфейс приема\передачи
-typedef void (*pResp)(uint8_t *buf, uint32_t len);
-typedef void (*Transact)(void* client, uint8_t *, uint32_t, pResp resp);
+typedef uint8_t* (*Transact)(void* client, uint8_t* rx, uint32_t rxLen, uint32_t* txLen);
 
 typedef struct
 {
@@ -46,12 +45,12 @@ typedef struct
 } sSlave;
 
 sSlave *ModbusSlaveInit(uint8_t id, uint16_t bufSize);
-void Transaction(void *client, uint8_t *rx, uint32_t len, pResp resp);
+uint8_t* Transaction(void *client, uint8_t *rx, uint32_t rx_len, uint32_t* tx_len);
 void AddUInt8ToRegs(sSlave *slave, volatile uint8_t *reg);
 void AddUInt16ToRegs(sSlave *slave, volatile uint16_t *val);
 void AddUInt32ToRegs(sSlave *slave, uint32_t *val);
 void AddInt32ToRegs(sSlave *slave, int32_t *val);
 void AddFloatToRegs(sSlave *slave, float *val);
-uint16_t GetCRC16(uint8_t *, uint8_t, uint8_t);
+uint16_t GetCRC16(uint8_t *, uint8_t, uint32_t);
 
 #endif

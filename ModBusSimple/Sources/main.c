@@ -36,11 +36,11 @@ int main(void)
     // AddUInt8ToRegs(slave, &OCR0A);  //0.5 reg / 1b
     // AddUInt8ToRegs(slave, &val8);   //0.5 reg / 1b
 
-    Uart0Init();
-    serial.Begin(SERIALPORT_BR_19200, SERIALPORT_DB_8, SERIALPORT_PRT_NONE, SERIALPORT_SB_ONE);
-    serial.SetTransaction(Transaction);
-    serial.client = (void*)slave;
-
+    sSerialPort* uart0 = UartInit(SERIALPORT_NUM_0, &UBRR0H, &UBRR0L, &UCSR0A, &UCSR0B, &UCSR0C, &UDR0);
+    UartBegin(uart0, SERIALPORT_BR_19200, SERIALPORT_DB_8, SERIALPORT_PRT_NONE, SERIALPORT_SB_ONE);
+    uart0->client = (void*)slave;
+    SetTransmitter(uart0, Transaction);
+    
     while (1)
     {
         // _delay_ms(2000);
