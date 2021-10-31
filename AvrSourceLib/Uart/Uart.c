@@ -2,6 +2,8 @@
 #include "Uart.h"
 #include "../Timer/Timer.h"
 
+static sTimer8b* timer;
+
 static sSerialPort* serials[4];
 static uint8_t buffer[BUFSIZE];
 static uint32_t rx_size = 0;
@@ -11,7 +13,14 @@ static Transact Transaction;
 static void _uartReadComplete();
 static void _usart_rx_vect(sSerialPort* serial);
 
-sSerialPort* UartInit(SERIALPORT_NUM number, uint8_t* UBRR_H, uint8_t* UBRR_L, uint8_t* UCSR_A, uint8_t* UCSR_B, uint8_t* UCSR_C, uint8_t* UDR)
+sSerialPort* UartInit(
+	SERIALPORT_NUM number,
+	uint8_t* UBRR_H,
+	uint8_t* UBRR_L,
+	uint8_t* UCSR_A,
+	uint8_t* UCSR_B,
+	uint8_t* UCSR_C,
+	uint8_t* UDR)
 {
 	sSerialPort * serial = (sSerialPort *)malloc(sizeof(sSerialPort));
 	serial->UBRR_H = UBRR_H;
@@ -21,15 +30,20 @@ sSerialPort* UartInit(SERIALPORT_NUM number, uint8_t* UBRR_H, uint8_t* UBRR_L, u
 	serial->UCSR_C = UCSR_C;
 	serial->UDR_ = UDR;
 
-	Timer2Init();
-	timer2.Config(T8_MODE_NORM);
-	timer2.InterruptOverFlowAttach(&_uartReadComplete);
+	timer = Timer8_Init(T8_T2, &TCCR2A, &TCCR2B, &TIMSK2, &TIFR2, &TCNT2, &OCR2A);
+	Timer8_SetConfig(timer, T8_MODE_NORM);
+	Timer8_InterruptOverFlowAttach(timer, &_uartReadComplete);
 
 	serials[number] = serial;
 	return serial;
 }
 
-void UartBegin(sSerialPort* serial, SERIALPORT_BR br, SERIALPORT_DB b, SERIALPORT_PRT p, SERIALPORT_SB sb)
+void UartBegin(
+	sSerialPort* serial,
+	SERIALPORT_BR br,
+	SERIALPORT_DB b,
+	SERIALPORT_PRT p,
+	SERIALPORT_SB sb)
 {
 	uint16_t baundrate = ((F_CPU / br) / 16UL) - 1;
 	*serial->UBRR_H = (uint8_t)(baundrate >> 8);
@@ -64,13 +78,13 @@ void UartWrite(sSerialPort* serial, uint8_t *buf, uint32_t len)
 
 uint32_t UartRead(sSerialPort* serial, uint8_t *buf)
 {
-	if (timer2.IsStart())
+	if (Timer8_IsStart(timer))
 	{
-		*timer2.tcnt_ = 0;
+		*timer->tcnt_ = 0;
 	}
 	else
 	{
-		timer2.Start(T8_CLK_1024, 0);
+		Timer8_Start(timer, T8_CLK_1024, 0);
 		rx_size = 0;
 	}
 	*(buf++) = UartReadByte(serial);
@@ -82,7 +96,7 @@ uint32_t UartRead(sSerialPort* serial, uint8_t *buf)
 static void _uartReadComplete(void* object)
 {
 	sSerialPort* ser = (sSerialPort*) object;
-	timer2.Stop();
+	Timer8_Stop(timer);
 
 	*ser->UCSR_B &= ~(SERIALPORT_CTRL_EN_RX | SERIALPORT_CTRL_EN_INT_RX);
 	*ser->UCSR_B |= SERIALPORT_CTRL_EN_TX;
@@ -110,15 +124,15 @@ void SetTransmitter(sSerialPort* serial, Transact func)
 
 static void _usart_rx_vect(sSerialPort* serial)
 {
-	if (timer2.IsStart())
+	if (Timer8_IsStart(timer))
 	{
-		*timer2.tcnt_ = 0;
+		*timer->tcnt_ = 0;
 	}
 	else
 	{
-		timer2.paramOverFlowInterrupt = (void*)serial;
+		timer->paramIOF = (void*)serial;
 		rx_size = 0;
-		timer2.Start(T8_CLK_1024, 0);		
+		Timer8_Start(timer, T8_CLK_1024, 0);		
 	}
 	buffer[rx_size++] = UartReadByte(serial);
 }

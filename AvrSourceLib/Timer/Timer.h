@@ -11,7 +11,7 @@ typedef void (*InterruptOverflow)(void* object);
 
 typedef uint8_t T8_t;
 #define T8_T0 0
-#define T8_T2 2
+#define T8_T2 1
 
 typedef uint8_t T8_MODE;
 #define T8_MODE_NORM 0x00
@@ -41,17 +41,31 @@ typedef struct
 	volatile uint8_t *timsk_;
 	volatile uint8_t *tifr_;
 	volatile uint8_t *tcnt_;
-	volatile uint8_t *ocr_a; //OCR2A
-	void* paramOverFlowInterrupt;
-	void (*Config)(T8_MODE);
-	void (*Start)(T8_CLK, uint8_t);
-	void (*Stop)();
-	bool (*IsStart)();
-	void (*InterruptOverFlowAttach)(InterruptOverflow);
-	void (*InterruptOverFlowDetach)();
+	volatile uint8_t *ocr_a;
+
+	InterruptOverflow HandlerIOF;
+	void* paramIOF;
 } sTimer8b;
 
-void Timer2Init();
-extern sTimer8b timer2;
+sTimer8b* Timer8_Init(
+	T8_t number, 
+	uint8_t* TCCR_A,
+ 	uint8_t* TCCR_B,
+  	uint8_t* TIMSK,
+   	uint8_t* TIFR,
+    uint8_t* TCNT,
+	uint8_t* OCR_A);
+
+void Timer8_SetConfig(sTimer8b* timer8, T8_MODE mode);
+
+void Timer8_Start(sTimer8b* timer8, T8_CLK clk, uint8_t offset);
+
+void Timer8_Stop(sTimer8b* timer8);
+
+bool Timer8_IsStart(sTimer8b* timer8);
+
+void Timer8_InterruptOverFlowAttach(sTimer8b* timer8, InterruptOverflow func);
+
+void Timer8_InterruptOverFlowDetach(sTimer8b* timer8);
 
 #endif

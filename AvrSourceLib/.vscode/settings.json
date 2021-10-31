@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "timer.h": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "stdbool.h": "c",
+        "stdint.h": "c"
     }
 }
