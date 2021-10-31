@@ -1,81 +1,79 @@
 #include <avr/interrupt.h>
 #include "Timer.h"
 
-sTimer8b timer2;
-static InterruptOverflow InterruptOverflowHandler;
+sTimer8b* timers8[2];
 
-static void Timer8bModeConfig(T8_MODE mode);
-static void Timer8bStart(T8_CLK clk, uint8_t offset);
-static void Timer8bStop();
-static bool Timer8bIsStart();
-static void AttachOverFlow(InterruptOverflow func);
-static void DetachOverFlow();
-
-void Timer2Init()
+sTimer8b* Timer8_Init(
+	T8_t number,
+	uint8_t* TCCR_A,
+	uint8_t* TCCR_B,
+	uint8_t* TIMSK,
+	uint8_t* TIFR,
+	uint8_t* TCNT,
+	uint8_t* OCR_A)
 {
-	timer2.tccr_a = &TCCR2A;
-	timer2.tccr_b = &TCCR2B;
-	timer2.timsk_ = &TIMSK2;
-	timer2.tifr_ = &TIFR2;
-	timer2.tcnt_ = &TCNT2;
-	timer2.ocr_a = &OCR2A;
+	sTimer8b * timer = (sTimer8b *)malloc(sizeof(sTimer8b));
+	timer->tccr_a = TCCR_A;
+	timer->tccr_b = TCCR_B;
+	timer->timsk_ = TIMSK;
+	timer->tifr_ = TIFR;
+	timer->tcnt_ = TCNT;
+	timer->ocr_a = OCR_A;
 
-	timer2.Config = &Timer8bModeConfig;
-	timer2.Start = &Timer8bStart;
-	timer2.Stop = &Timer8bStop;
-	timer2.IsStart = &Timer8bIsStart;
-	timer2.InterruptOverFlowAttach = &AttachOverFlow;
-	timer2.InterruptOverFlowDetach = &DetachOverFlow;
+	timers8[number] = timer;
+
+	return timer;
 }
 
-static void Timer8bModeConfig(T8_MODE mode)
+void Timer8_SetConfig(sTimer8b* timer8, T8_MODE mode)
 {
-	*timer2.tccr_a = BM_ByteHi(mode);
-	*timer2.tccr_b = BM_ByteLow(mode);
+	*timer8->tccr_a = BM_ByteHi(mode);
+	*timer8->tccr_b = BM_ByteLow(mode);
 
 	//*timer.tccr_a |= BM_ByteHi(timer8->mode.paramA);
 	//*timer.tccr_a |= BM_ByteHi(timer8->mode.paramB);
 
-	*timer2.tccr_b &= 0xF8; //timer off
+	*timer8->tccr_b &= 0xF8; //timer off
 	//*timer.timsk_ = 0x00; // all interupts off
-	*timer2.timsk_ = 0x01; // interrupt overflow on
+	*timer8->timsk_ = 0x01; // interrupt overflow on
 }
 
-static void Timer8bStart(T8_CLK clk, uint8_t offset)
+void Timer8_Start(sTimer8b* timer8, T8_CLK clk, uint8_t offset)
 {
-	*timer2.tcnt_ = offset;
-	*timer2.tccr_b = (clk != T8_CLK_NULL) 
-		? *timer2.tccr_b 
-		| clk : *timer2.tccr_b & 0xF8;
+	*timer8->tcnt_ = offset;
+	*timer8->tccr_b = (clk != T8_CLK_NULL) 
+		? *timer8->tccr_b | clk
+		: *timer8->tccr_b & 0xF8;
 }
 
-static void Timer8bStop()
+void Timer8_Stop(sTimer8b* timer8)
 {
-	Timer8bStart(T8_CLK_NULL, 0);
+	Timer8_Start(timer8, T8_CLK_NULL, 0);
 }
 
-static bool Timer8bIsStart()
+bool Timer8_IsStart(sTimer8b* timer8)
 {
-	return ((*timer2.tccr_b & 0x07) == T8_CLK_NULL) ? false : true;
+	return (*timer8->tccr_b & 0x07) == T8_CLK_NULL ? false : true;
 }
 
-static void AttachOverFlow(InterruptOverflow func)
+void Timer8_InterruptOverFlowAttach(sTimer8b* timer8, InterruptOverflow func)
 {
-	*timer2.timsk_ |= 0x01; // interrupt overflow on
-	InterruptOverflowHandler = func;
+	*timer8->timsk_ |= 0x01; // interrupt overflow on
+	timer8->HandlerIOF = func;
 }
 
-static void DetachOverFlow()
+void Timer8_InterruptOverFlowDetach(sTimer8b* timer8)
 {
-	*timer2.timsk_ &= ~(1 << 0);
-	InterruptOverflowHandler = 0;
+	*timer8->timsk_ &= ~(1 << 0);
+	timer8->HandlerIOF = 0;
 }
 
 // Прерывание таймер2 по переполнению 0xFF
 ISR(TIMER2_OVF_vect)
 {
-	if (InterruptOverflowHandler)
+	if (timers8[1] != NULL 
+		&& timers8[1]->HandlerIOF != NULL)
 	{
-		InterruptOverflowHandler(timer2.paramOverFlowInterrupt);
+		timers8[1]->HandlerIOF(timers8[1]->paramIOF);
 	}
 }
