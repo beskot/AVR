@@ -9,12 +9,14 @@ AVR_SOURCE_LIB = ../AvrSourceLib
 BIN_DIR = ./Build
 
 SOURCE_H = \
+$(AVR_SOURCE_LIB)/Common/Cvector.h \
 $(AVR_SOURCE_LIB)/Common/Macros.h \
 $(AVR_SOURCE_LIB)/Timer/Timer.h \
 $(AVR_SOURCE_LIB)/Uart/Uart.h \
 Sources/Modbus/ModbusSlave.h \
 
 SOURCE_C = \
+$(AVR_SOURCE_LIB)/Common/Cvector.c \
 $(AVR_SOURCE_LIB)/Timer/Timer.c \
 $(AVR_SOURCE_LIB)/Uart/Uart.c \
 Sources/Modbus/ModbusSlave.c \
@@ -57,7 +59,8 @@ $(BIN_DIR)/Timer.o: $(AVR_SOURCE_LIB)/Timer/Timer.c $(SOURCE_H)
 $(BIN_DIR)/Uart.o: $(AVR_SOURCE_LIB)/Uart/Uart.c $(SOURCE_H)
 	$(CC) -c $(_DEPEND) -o $(_TARGET)
 
-
+$(BIN_DIR)/Cvector.o: $(AVR_SOURCE_LIB)/Common/Cvector.c $(SOURCE_H)
+	$(CC) -c $(_DEPEND) -o $(_TARGET)
 
 $(TARGET_BIN).elf: $(OBJECTS)
 	$(CC) -o ${_TARGET} $^ $(SOURCE_H)

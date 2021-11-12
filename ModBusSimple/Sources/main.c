@@ -5,11 +5,7 @@
 #include "../AvrSourceLib/Uart/Uart.h"
 #include "./Modbus/ModbusSlave.h"
 
-const char *device = "_wifi_";
 uint8_t val8 = 0x50;
-uint16_t val16 = 0x1234;
-uint32_t val32 = 0x44332211;
-float val_f = -5.65f;
 
 int main(void)
 {
@@ -21,21 +17,11 @@ int main(void)
     //cli();
     sei();
 
-    sSlave *slave = ModbusSlaveInit(0x01, 1);
+    sSlave *slave = ModbusSlaveInit(0x01);
 
     AddInfo(slave, "Modbus ver 1.0.0.0");
-    AddUInt8ToRegs(slave, &OCR0A);  //0.5 reg / 1b
-    AddUInt8ToRegs(slave, &val8);   //0.5 reg / 1b
-
-    // AddFloatToRegs(slave, &val_f);  //2 reg /4b
-    // AddUInt32ToRegs(slave, &val32); //2 reg /4b
-    // AddUInt8ToRegs(slave, &TCCR0A); //0.5 reg / 1b
-    // AddUInt8ToRegs(slave, &TCCR0B); //0.5 reg / 1b
-    // AddUInt8ToRegs(slave, &OCR0A);  //0.5 reg / 1b
-    // AddUInt8ToRegs(slave, &val8);   //0.5 reg / 1b
-    // AddUInt16ToRegs(slave, &val16); //1 reg / 2b
-    // AddUInt8ToRegs(slave, &OCR0A);  //0.5 reg / 1b
-    // AddUInt8ToRegs(slave, &val8);   //0.5 reg / 1b
+    AddUInt8ToRegs(slave, &OCR0A);
+    AddUInt8ToRegs(slave, &val8);
 
     sSerialPort* uart0 = UartInit(SERIALPORT_NUM_0, &UBRR0H, &UBRR0L, &UCSR0A, &UCSR0B, &UCSR0C, &UDR0);
     UartBegin(uart0, SERIALPORT_BR_19200, SERIALPORT_DB_8, SERIALPORT_PRT_NONE, SERIALPORT_SB_ONE);
