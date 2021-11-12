@@ -7,15 +7,30 @@ void ClientTransactionFloat(sSlave *slave, Transact);
 void reverse_array(uint8_t a[], int n);
 void PrintResponse(char* title, uint8_t *buf, int len);
 
-int main()
+void CvectorTest()
 {
-    uint16_t fval = 0x8990; //-60274491;
-    sSlave *slave = ModbusSlaveInit(0x01, 1);
+    int k = 210;
+    cvector* vector = cvector_init(sizeof(int));
+    cvector_push(vector, &k);
+    *(int*)cvector_get(vector, 0) = 14;
+}
+
+void ModbusTest()
+{
+    uint16_t fval = 0x7788; //-60274491;
+    sSlave *slave = ModbusSlaveInit(0x01);
     AddUInt16ToRegs(slave, &fval);
+   
     ClientTransactionFloat(slave, &Transaction);
 
     getchar();
     free(slave);
+}
+
+int main()
+{
+    CvectorTest();
+    ModbusTest();
 
     return 0;
 }

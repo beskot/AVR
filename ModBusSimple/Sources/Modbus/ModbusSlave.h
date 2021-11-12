@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "../AvrSourceLib/Common/Macros.h"
+#include "../AvrSourceLib/Common/Cvector.h"
 
 // Команды
 #define ReadHoldingRegisters 0x03
@@ -31,25 +32,19 @@
 //Интерфейс приема\передачи
 typedef uint8_t* (*Transact)(void* client, uint8_t* rx, uint32_t rxLen, uint32_t* txLen);
 
-typedef struct
-{
-	uint16_t offset;
-	uint16_t count;
-	uint8_t **ppBuf;
-} sRegs16;
+typedef uint8_t reg_t; // TO DO
 
 typedef struct
 {
 	uint8_t id;
-	sRegs16 *regs;
-	uint8_t counter;
+	cvector* regs;
 	char* info;
 } sSlave;
 
-sSlave *ModbusSlaveInit(uint8_t id, uint16_t bufSize);
+sSlave *ModbusSlaveInit(uint8_t id);
 uint8_t* Transaction(void *client, uint8_t *rx, uint32_t rx_len, uint32_t* tx_len);
-void AddUInt8ToRegs(sSlave *slave, volatile uint8_t *reg);
-void AddUInt16ToRegs(sSlave *slave, volatile uint16_t *val);
+void AddUInt8ToRegs(sSlave *slave, uint8_t *reg);
+void AddUInt16ToRegs(sSlave *slave, uint16_t *val);
 void AddUInt32ToRegs(sSlave *slave, uint32_t *val);
 void AddInt32ToRegs(sSlave *slave, int32_t *val);
 void AddFloatToRegs(sSlave *slave, float *val);

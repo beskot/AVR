@@ -11,29 +11,23 @@ uint8_t* _func10(sSlave *slave, uint8_t *rx,  uint32_t *tx_len);
 uint8_t* _func11(sSlave *slave, uint8_t *rx,  uint32_t *tx_len);
 
 //Создать клента
-sSlave *ModbusSlaveInit(uint8_t id, uint16_t regCount)
+sSlave *ModbusSlaveInit(uint8_t id)
 {
 	sSlave *slave = (sSlave *)malloc(sizeof(sSlave));
-
-	slave->counter = 0;
-
 	slave->id = id;
-	slave->regs = (sRegs16 *)malloc(sizeof(sRegs16));
-	slave->regs->offset = 0;
-	slave->regs->ppBuf = (uint8_t **)malloc(2 * regCount * sizeof(uint8_t *));
-	slave->regs->count = regCount;
+	slave->regs =  cvector_init(sizeof(uint8_t));
 
 	return slave;
 }
 
 // Добавить число типа uint8_t в массив регистров
-void AddUInt8ToRegs(sSlave *slave, volatile uint8_t *reg)
+void AddUInt8ToRegs(sSlave *slave, uint8_t *reg)
 {
-	slave->regs->ppBuf[slave->counter++] = reg;
+	cvector_push(slave->regs, reg);
 }
 
 // Добавить число типа uint16_t в массив регистров
-void AddUInt16ToRegs(sSlave *slave, volatile uint16_t *val)
+void AddUInt16ToRegs(sSlave *slave, uint16_t *val)
 {
 	AddUInt8ToRegs(slave, ((uint8_t *)val) + 1); //Hi
 	AddUInt8ToRegs(slave, (uint8_t *)val); //Low
@@ -182,11 +176,11 @@ uint8_t* _func3(sSlave *slave, uint8_t *rx,  uint32_t *tx_len)
 	uint16_t offset = BM_WORD(rx[2], rx[3]);
 	uint16_t count = BM_WORD(rx[4], rx[5]);
 
-	if (offset >= slave->regs->count)
+	if (offset >= slave->regs->size / 2)
 	{
 		tx = _errorMessage(slave->id, rx[1], MB_ERR_NOTOFFSET, tx_len);
 	}
-	else if (offset + count > slave->regs->offset + slave->regs->count)
+	else if (offset + count > slave->regs->size / 2)
 	{
 		tx = _errorMessage(slave->id, rx[1], MB_ERR_NOTCOUNT, tx_len);
 	}
@@ -205,7 +199,7 @@ uint8_t* _func3(sSlave *slave, uint8_t *rx,  uint32_t *tx_len)
 
 		while (i < bcount)
 		{
-			tx[3 + i] = *slave->regs->ppBuf[boffset + i - slave->regs->offset];
+			tx[3 + i] = *(uint8_t *)cvector_get(slave->regs, (int)(boffset + i));
 			i++;
 		}
 	}
@@ -236,11 +230,11 @@ uint8_t* _func10(sSlave *slave, uint8_t *rx,  uint32_t *tx_len)
 	uint16_t offset = BM_WORD(rx[2], rx[3]);
 	uint16_t count = BM_WORD(rx[4], rx[5]);
 
-	if (offset >= slave->regs->count)
+	if (offset >= slave->regs->size / 2)
 	{
 		tx = _errorMessage(slave->id, rx[1], MB_ERR_NOTOFFSET, tx_len);
 	}
-	else if (offset + count > slave->regs->offset + slave->regs->count)
+	else if (offset + count > slave->regs->size / 2)
 	{
 		tx = _errorMessage(slave->id, rx[1], MB_ERR_NOTCOUNT, tx_len);
 	}
@@ -255,7 +249,7 @@ uint8_t* _func10(sSlave *slave, uint8_t *rx,  uint32_t *tx_len)
 
 		while (i < bcount)
 		{
-			*slave->regs->ppBuf[boffset + i - slave->regs->offset] = rx[7 + i];
+			*(uint8_t*)cvector_get(slave->regs, (int)(boffset + i)) = rx[7 + i];
 			i++;
 		}
 
