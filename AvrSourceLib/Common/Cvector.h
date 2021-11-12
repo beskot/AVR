@@ -13,9 +13,9 @@ typedef struct{
     size_t element_size;
 } cvector;
 
-void cvector_init(cvector* __v, size_t __dataSize);
+cvector* cvector_init(size_t __dataSize);
  
-int inline cvector_size(cvector* __v) { return __v->size; }
+int cvector_size(cvector* __v);
  
 void cvector_push(cvector* __v, void* __data);
  

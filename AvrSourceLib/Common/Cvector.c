@@ -2,12 +2,15 @@
 
 void static _cvector_resize(cvector* __v, int __newCap);
 
-void cvector_init(cvector* __v, size_t __dataSize)
+cvector* cvector_init(size_t __dataSize)
 {
+    cvector * __v = (cvector *)malloc(sizeof(cvector));
     __v->capacity = CVECTOR_INIT_CAPACITY;
     __v->size = 0;
     __v->element_size = __dataSize;
     __v->data = (void **) malloc(CVECTOR_INIT_CAPACITY * sizeof(void*));
+
+    return __v;
 }
  
 void cvector_push(cvector* __v, void* __data)
@@ -44,7 +47,8 @@ int cvector_delete(cvector* __v, int __index)
     
     free(cvector_get(__v, __index));
     
-    for(int i = __index; i < __v->size - 1; i++)
+    int i = 0;
+    for(; i < __v->size - 1; i++)
     {
         __v->data[i] = __v->data[i + 1];
     }
@@ -66,7 +70,8 @@ void* cvector_get(cvector* __v, int __index)
  
 void cvector_clear(cvector* __v)
 {
-    for(int i = 0; i < __v->size; i++)
+    int i = 0;
+    for(; i < __v->size; i++)
     {
         free(__v->data[i]);
     }
@@ -79,4 +84,9 @@ void _cvector_resize(cvector* __v, int __newCap)
 {
     __v->capacity = __newCap;
     __v->data = realloc(__v->data, __newCap * sizeof(void *));
+}
+
+int cvector_size(cvector* __v)
+{ 
+    return __v->size; 
 }
